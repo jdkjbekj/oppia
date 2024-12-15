@@ -1,4 +1,4 @@
-name: PR Permission Review
+name: PR Review Workflow
 
 on:
   pull_request:
@@ -10,19 +10,25 @@ on:
       - created
 
 jobs:
-  review-permissions:
+  check-permissions:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log Permissions Check
+        run: echo "Checking for permissions in the workflow..."
+
       - name: Check for permission changes
-        if: github.event_name == 'pull_request'
         run: |
-          permissions=$(cat ${{ github.workspace }}/.github/workflows/*.yml | grep permissions)
+          permissions=$(cat /oppia/oppia/.github/workflows/*.yml | grep permissions)
           if [[ -n "$permissions" ]]; then
             echo "Permissions found: $permissions"
             gh pr comment ${{ github.number }} -b "Permissions request detected in this workflow PR. Please review and approve the required permissions."
             exit 1  # Halt workflow
           fi
-      
+        shell: /usr/bin/bash -e {0}
+
       - name: Await specific approval from maintainers
         if: github.event_name == 'issue_comment'
         run: |
@@ -33,3 +39,11 @@ jobs:
           fi
           echo "Permissions not granted"
           exit 1  # Halt workflow
+
+      - name: Log Approval Status
+        run: |
+          if [[ ${{ job.status }} == 'success' ]]; then
+            echo "Workflow passed successfully"
+          else
+            echo "Workflow failed due to missing permissions approval"
+          fi
