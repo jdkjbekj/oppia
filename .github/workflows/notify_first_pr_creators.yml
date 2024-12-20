@@ -10,7 +10,7 @@ jobs:
 
     steps:
       - name: Run Workflow for First-Time Contributors
-        uses: actions/github-script@v4
+        uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -39,8 +39,12 @@ jobs:
                 owner,
                 repo,
                 issue_number: prNumber,
-                body: | Hello @${username}! 👋 Welcome to contributing! As this is your first pull request, please make sure that your PR is assigned to the correct reviewers. Check the **"Assignees"** section in the sidebar on the right. Typically, this should match the **"Reviewers"** section. If it is not correct, you can leave a comment with the syntax: \`\`\`@reviewer_username PTAL\`\`\`to request that a specific reviewer be assigned.Thank you for your contribution to the project! 🚀
-                ,
+                body: |
+                  Hello @${username}! Thank you for making a PR.
+
+                  Please make sure that your PR is assigned to the correct reviewers -- check the "Assignees" section in the sidebar on the right. Typically, this should match the "Reviewers" section. If it is not correct, you can leave a comment with the syntax `@reviewer_username PTAL` to request that a specific reviewer be assigned.
+
+                  Thanks!
               });
 
               // Fetch requested reviewers and teams from CODEOWNERS
@@ -63,8 +67,8 @@ jobs:
                   owner,
                   repo,
                   issue_number: prNumber,
-                  body: | No individual reviewers were found by GitHub. Please assign an appropriate reviewer. @oppia/dev-workflow-reviewers Could you take a look at this PR? Thank you!
-                  ,
+                  body: |
+                    No individual reviewers were found by GitHub. Please assign an appropriate reviewer. @oppia/dev-workflow-reviewers Could you take a look at this PR? Thank you!
                 });
               }
 
