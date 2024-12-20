@@ -49,9 +49,7 @@ jobs:
                      \`\`\`
                      @reviewer_username PTAL
                      \`\`\`
-                     to request that a specific reviewer be assigned.
-  
-                    Thanks for contributing to the project! 🚀`;
+                     to request that a specific reviewer be assigned. Thanks for contributing to the project! 🚀`
                 ,
               });
 
