@@ -1,85 +1,77 @@
-name: Assign CODEOWNERS as Assignees and Notify Contributor
+name: No Reviewer Reminder for First-Time Contributors
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened]  # Trigger when a PR is created
 
 jobs:
-  assign-codeowners:
+  first-time-contributor-check:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Assign CODEOWNERS as Assignees
+      - name: Run Workflow for First-Time Contributors
         uses: actions/github-script@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { pull_request } = context.payload;
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
+            const { pull_request, repository } = context.payload;
+            const owner = repository.owner.login;
+            const repo = repository.name;
             const prNumber = pull_request.number;
             const username = pull_request.user.login;
 
-            // Fetch requested reviewers and teams from CODEOWNERS
-            const requestedReviewers = pull_request.requested_reviewers.map(r => r.login);
-            const requestedTeams = pull_request.requested_teams.map(t => t.slug);
-
-            // Check if the user has any merged PRs
+            // Check if the contributor has any merged PRs
             const userPRs = await github.pulls.list({
               owner,
               repo,
-              state: "closed",
-              per_page: 1,
-              direction: "asc",
-              sort: "created",
+              state: "all",
+              per_page: 100, // Fetch up to 100 PRs
             });
-            const isFirstPR = userPRs.data.length === 0;
 
-            // If no reviewers are assigned
-            if (requestedReviewers.length === 0 && requestedTeams.length === 0) {
-              // Send reminder to the contributor if it's their first PR
-              if (isFirstPR) {
-                await github.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: prNumber,
-                  body: `
-                    Hello @${username}! Thank you for making a PR. 
+            const mergedPRs = userPRs.data.filter(pr => pr.merged_at && pr.user.login === username);
+            const hasNoMergedPRs = mergedPRs.length === 0;
 
-                    Please make sure that your PR is assigned to the correct reviewers -- check the "Assignees" section in the sidebar on the right. Typically, this should match the "Reviewers" section. If it is not correct, you can leave a comment with the syntax \`@reviewer_username PTAL\` to request that a specific reviewer be assigned.
+            if (hasNoMergedPRs) {
+              console.log(`This is the first PR for @${username}. Running the workflow.`);
 
-                    Thanks!
-                  `,
-                });
-              }
-            }
-
-            // Assign individual reviewers as assignees
-            if (requestedReviewers.length > 0) {
-              await github.issues.addAssignees({
-                owner,
-                repo,
-                issue_number: prNumber,
-                assignees: requestedReviewers,
-              });
-              console.log(`Assigned reviewers: ${requestedReviewers.join(", ")}`);
-            } else {
-              // If no individual reviewers, notify dev workflow team
-              console.log("No reviewers found in CODEOWNERS. Notifying team.");
+              // Notify first-time contributors
               await github.issues.createComment({
                 owner,
                 repo,
                 issue_number: prNumber,
-                body: `
-                  No reviewers were automatically assigned to this PR because no matches were found in the CODEOWNERS file. 
-                  @oppia/dev-workflow-reviewers Could you please review the issue?
-
-                  Thank you!
-                `,
+                body: | Hello @${username}! 👋 Welcome to contributing! As this is your first pull request, please make sure that your PR is assigned to the correct reviewers. Check the **"Assignees"** section in the sidebar on the right. Typically, this should match the **"Reviewers"** section. If it is not correct, you can leave a comment with the syntax: \`\`\`@reviewer_username PTAL\`\`\`to request that a specific reviewer be assigned.Thank you for your contribution to the project! 🚀
+                ,
               });
-            }
 
-            // Assign reviewers as assignees (for teams, if any)
-            if (requestedTeams.length > 0) {
-              console.log(`Teams requested for review: ${requestedTeams.join(", ")}`);
+              // Fetch requested reviewers and teams from CODEOWNERS
+              const requestedReviewers = pull_request.requested_reviewers.map(r => r.login);
+              const requestedTeams = pull_request.requested_teams.map(t => t.slug);
+
+              if (requestedReviewers.length > 0) {
+                // Assign reviewers specified in CODEOWNERS
+                console.log(`Assigning CODEOWNERS reviewers: ${requestedReviewers.join(", ")}`);
+                await github.issues.addAssignees({
+                  owner,
+                  repo,
+                  issue_number: prNumber,
+                  assignees: requestedReviewers,
+                });
+              } else {
+                // Notify the dev workflow team if no reviewers are found
+                console.log("No reviewers found in CODEOWNERS. Notifying the dev workflow team.");
+                await github.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: prNumber,
+                  body: | No individual reviewers were found by GitHub. Please assign an appropriate reviewer. @oppia/dev-workflow-reviewers Could you take a look at this PR? Thank you!
+                  ,
+                });
+              }
+
+              if (requestedTeams.length > 0) {
+                console.log(`Teams requested for review: ${requestedTeams.join(", ")}`);
+                // Add logic here to handle teams if necessary
+              }
+            } else {
+              console.log(`@${username} has merged PRs. Skipping this workflow.`);
             }
