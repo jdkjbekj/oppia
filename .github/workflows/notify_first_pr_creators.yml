@@ -1,42 +1,73 @@
-name: Assign Reviewers on PR Creation
+name: No Reviewer Reminder for First-Time Contributors
 
 on:
   pull_request:
-    types: [opened]  # Trigger the workflow when a PR is created
+    types: [opened]  # Trigger when a PR is created
 
 jobs:
-  assign-reviewers:
+  first-time-contributor-check:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Assign Reviewers as Assignees
-        uses: actions/github-script@v4
+      - name: Check and Notify First-Time Contributors
+        uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { pull_request } = context.payload;
-
-            if (!pull_request) {
-              console.log("No pull request context found. Ensure the workflow is triggered by a pull request.");
-              return;
-            }
-
-            const owner = context.repo.owner;
+            const { pull_request, repository } = context.payload;
+            const owner = repository.owner.login;
             const repo = context.repo.repo;
             const prNumber = pull_request.number;
+            const username = pull_request.user.login;
 
-            // Define reviewers explicitly for testing purposes
-            const reviewersToAssign = ["Mayank77maruti", "reviewer2"]; // Replace with real usernames
+            console.log(`Processing PR #${prNumber} by @${username} in repository ${owner}/${repo}.`);
 
-            console.log(`Assigning reviewers to PR #${prNumber} in ${owner}/${repo}`);
-            console.log(`Reviewers to assign: ${reviewersToAssign.join(", ")}`);
-
-            // Assign reviewers to the PR
-            await github.issues.addAssignees({
+            // Fetch all PRs created by the contributor
+            const userPRs = await github.rest.pulls.list({
               owner,
               repo,
-              issue_number: prNumber,
-              assignees: reviewersToAssign,
+              state: "all",
+              per_page: 100,
             });
 
-            console.log(`Successfully assigned reviewers: ${reviewersToAssign.join(", ")}`);
+            // Check if the contributor has any merged PRs
+            const mergedPRs = userPRs.data.filter(pr => pr.merged_at && pr.user.login === username);
+            const hasNoMergedPRs = mergedPRs.length === 0;
+
+            if (hasNoMergedPRs) {
+              console.log(`This is the first PR for @${username}. Sending notification and assigning reviewers.`);
+
+              // Notify first-time contributors
+              await github.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body: |
+                     Hello @${username}! 👋 Thank you for making a PR.
+
+                     Please make sure that your PR is assigned to the correct reviewers -- check the **"Assignees"** section in the sidebar on the right. Typically, this should match the **"Reviewers"** section. If it is not correct, you can leave a comment with the syntax:
+                     \`\`\`
+                     @reviewer_username PTAL
+                     \`\`\`
+                     to request that a specific reviewer be assigned.
+  
+                    Thanks for contributing to the project! 🚀
+                ,
+              });
+
+              // Assign hardcoded reviewers (replace with CODEOWNERS logic if needed)
+              const hardcodedReviewers = ['Mayank77maruti', 'reviewer2']; // Replace with actual GitHub usernames
+              if (hardcodedReviewers.length > 0) {
+                console.log(`Assigning hardcoded reviewers: ${hardcodedReviewers.join(", ")}`);
+                await github.issues.addAssignees({
+                  owner,
+                  repo,
+                  issue_number: prNumber,
+                  assignees: hardcodedReviewers,
+                });
+              } else {
+                console.log("No reviewers defined in the hardcoded list.");
+              }
+            } else {
+              console.log(`@${username} has merged PRs. Skipping first-time contributor actions.`);
+            }
