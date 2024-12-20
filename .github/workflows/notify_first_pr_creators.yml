@@ -47,18 +47,17 @@ jobs:
                   Thanks!
               });
 
-              // Fetch requested reviewers and teams from CODEOWNERS
-              const requestedReviewers = pull_request.requested_reviewers.map(r => r.login);
-              const requestedTeams = pull_request.requested_teams.map(t => t.slug);
+              // Hardcoded CODEOWNERS reviewers
+              const hardcodedReviewers = ['Mayank77maruti', 'seanlip']; // Replace with actual GitHub usernames
 
-              if (requestedReviewers.length > 0) {
-                // Assign reviewers specified in CODEOWNERS
-                console.log(`Assigning CODEOWNERS reviewers: ${requestedReviewers.join(", ")}`);
+              if (hardcodedReviewers.length > 0) {
+                // Assign hardcoded reviewers
+                console.log(`Assigning hardcoded CODEOWNERS reviewers: ${hardcodedReviewers.join(", ")}`);
                 await github.issues.addAssignees({
                   owner,
                   repo,
                   issue_number: prNumber,
-                  assignees: requestedReviewers,
+                  assignees: hardcodedReviewers,
                 });
               } else {
                 // Notify the dev workflow team if no reviewers are found
@@ -70,11 +69,6 @@ jobs:
                   body: |
                     No individual reviewers were found by GitHub. Please assign an appropriate reviewer. @oppia/dev-workflow-reviewers Could you take a look at this PR? Thank you!
                 });
-              }
-
-              if (requestedTeams.length > 0) {
-                console.log(`Teams requested for review: ${requestedTeams.join(", ")}`);
-                // Add logic here to handle teams if necessary
               }
             } else {
               console.log(`@${username} has merged PRs. Skipping this workflow.`);
