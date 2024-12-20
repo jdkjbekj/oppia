@@ -39,16 +39,11 @@ jobs:
                 owner,
                 repo,
                 issue_number: prNumber,
-                body: |
-                  Hello @${username}! Thank you for making a PR.
-
-                  Please make sure that your PR is assigned to the correct reviewers -- check the "Assignees" section in the sidebar on the right. Typically, this should match the "Reviewers" section. If it is not correct, you can leave a comment with the syntax `@reviewer_username PTAL` to request that a specific reviewer be assigned.
-
-                  Thanks!
+                body: "Hello @${username}! Thank you for making a PR.\n\nPlease make sure that your PR is assigned to the correct reviewers -- check the \"Assignees\" section in the sidebar on the right. Typically, this should match the \"Reviewers\" section. If it is not correct, you can leave a comment with the syntax `@reviewer_username PTAL` to request that a specific reviewer be assigned.\n\nThanks!"
               });
 
               // Hardcoded CODEOWNERS reviewers
-              const hardcodedReviewers = ['Mayank77maruti', 'seanlip']; // Replace with actual GitHub usernames
+              const hardcodedReviewers = ['reviewer1', 'reviewer2']; // Replace with actual GitHub usernames
 
               if (hardcodedReviewers.length > 0) {
                 // Assign hardcoded reviewers
@@ -66,8 +61,7 @@ jobs:
                   owner,
                   repo,
                   issue_number: prNumber,
-                  body: |
-                    No individual reviewers were found by GitHub. Please assign an appropriate reviewer. @oppia/dev-workflow-reviewers Could you take a look at this PR? Thank you!
+                  body: "No individual reviewers were found by GitHub. Please assign an appropriate reviewer. @oppia/dev-workflow-reviewers Could you take a look at this PR? Thank you!"
                 });
               }
             } else {
