@@ -16,18 +16,19 @@ jobs:
           script: |
             const { pull_request, repository } = context.payload;
             const owner = repository.owner.login;
-            const repo = repository.name;
+            const repo = context.repo.repo; // Corrected to use context.repo.repo
             const prNumber = pull_request.number;
             const username = pull_request.user.login;
 
-            // Check if the contributor has any merged PRs
-            const userPRs = await github.pulls.list({
+            // Fetch PRs by the contributor
+            const userPRs = await github.rest.pulls.list({
               owner,
               repo,
               state: "all",
-              per_page: 100, // Fetch up to 100 PRs
+              per_page: 100,
             });
 
+            // Check if contributor has no merged PRs
             const mergedPRs = userPRs.data.filter(pr => pr.merged_at && pr.user.login === username);
             const hasNoMergedPRs = mergedPRs.length === 0;
 
@@ -38,30 +39,27 @@ jobs:
               await github.issues.createComment({
                 owner,
                 repo,
-                issue_number: prNumber,
-                body: "Hello @${username}! Thank you for making a PR.\n\nPlease make sure that your PR is assigned to the correct reviewers -- check the \"Assignees\" section in the sidebar on the right. Typically, this should match the \"Reviewers\" section. If it is not correct, you can leave a comment with the syntax `@reviewer_username PTAL` to request that a specific reviewer be assigned.\n\nThanks!"
+                issue_number: prNumber
+          body: |
+            Hello @${username}! 👋 Thank you for making a PR. Please make sure that your PR is assigned to the correct reviewers -- check the **"Assignees"** section in the sidebar on the right. Typically, this should match the **"Reviewers"** section. If it is not correct, you can leave a comment with the syntax:
+            \`\`\`
+            @reviewer_username Please take a look (PTAL)
+            \`\`\`
+            to request that a specific reviewer be assigned.
+
+            Thanks for contributing to the project! 🚀
+
               });
 
-              // Hardcoded CODEOWNERS reviewers
+              // Assign hardcoded CODEOWNERS reviewers
               const hardcodedReviewers = ['reviewer1', 'reviewer2']; // Replace with actual GitHub usernames
-
               if (hardcodedReviewers.length > 0) {
-                // Assign hardcoded reviewers
-                console.log(`Assigning hardcoded CODEOWNERS reviewers: ${hardcodedReviewers.join(", ")}`);
+                console.log(`Assigning hardcoded code owners reviewers: ${hardcodedReviewers.join(", ")}`);
                 await github.issues.addAssignees({
                   owner,
                   repo,
                   issue_number: prNumber,
                   assignees: hardcodedReviewers,
-                });
-              } else {
-                // Notify the dev workflow team if no reviewers are found
-                console.log("No reviewers found in CODEOWNERS. Notifying the dev workflow team.");
-                await github.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: prNumber,
-                  body: "No individual reviewers were found by GitHub. Please assign an appropriate reviewer. @oppia/dev-workflow-reviewers Could you take a look at this PR? Thank you!"
                 });
               }
             } else {
