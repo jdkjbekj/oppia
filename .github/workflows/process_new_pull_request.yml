@@ -23,6 +23,9 @@ jobs:
             const repo = repository.name;
             const prNumber = pull_request.number;
             const submitterUsername = pull_request.user.login;
+            
+            // Hardcode the reviewer to a specific username
+            const requestedReviewers = ['your-username']; // Replace 'your-username' with the desired username
 
             // Fetch merged PRs of the submitter
             const mergedPRs = await github.pulls.list({
@@ -33,9 +36,7 @@ jobs:
               sort: "created",
               direction: "desc",
             });
-
             const submitterIsNewContributor = mergedPRs.data.length === 0;
-
             console.log(
               `User @${submitterUsername} is ${
                 submitterIsNewContributor
@@ -44,11 +45,7 @@ jobs:
               }.`
             );
 
-            // Get reviewers from CODEOWNERS
-            const requestedReviewers = pull_request.requested_reviewers.map(r => r.login);
-            const requestedTeams = pull_request.requested_teams.map(t => t.slug);
-
-            // Assign reviewers as assignees
+            // Assign hardcoded reviewer as assignee
             if (requestedReviewers.length > 0) {
               await github.issues.addAssignees({
                 owner,
@@ -57,7 +54,7 @@ jobs:
                 assignees: requestedReviewers,
               });
               console.log(
-                `Assigned reviewers: ${requestedReviewers.join(", ")}`
+                `Assigned reviewer: ${requestedReviewers.join(", ")}`
               );
             }
 
@@ -77,7 +74,6 @@ jobs:
             // Add PTAL syntax comment only for new contributors
             if (submitterIsNewContributor) {
               const commentBody = `Hello @${submitterUsername}! Thank you for making a PR. Please ensure your PR is assigned to the correct reviewers -- check the "Assignees" section in the sidebar on the right. Typically, this should match the "Reviewers" section. If it's not correct, you can leave a comment with the syntax \`@reviewer_username PTAL\` to request that a specific reviewer be assigned.\n\n Thanks!`;
-
               await github.issues.createComment({
                 owner,
                 repo,
