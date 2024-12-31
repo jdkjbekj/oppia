@@ -25,7 +25,7 @@ jobs:
             const submitterUsername = pull_request.user.login;
             
             // Hardcode the reviewer to a specific username
-            const requestedReviewers = ['your-username']; // Replace 'your-username' with the desired username
+            const requestedReviewers = ['Fgrdxgu']; // Replace 'your-username' with the desired username
 
             // Fetch merged PRs of the submitter
             const mergedPRs = await github.pulls.list({
