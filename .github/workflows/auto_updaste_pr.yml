@@ -1,0 +1,21 @@
+name: autoupdate
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  autoupdate:
+    name: autoupdate
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Update pull request branches targeting develop
+        uses: castastrophe/actions-pr-auto-update@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}  # Use a PAT for forked repositories
+        with:
+          target_branch: develop  # Update PRs targeting the `develop` branch
+          skip_conflict_prs: true  # Skip PRs with merge conflicts
