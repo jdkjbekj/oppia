@@ -1,21 +1,41 @@
-name: autoupdate
+name: Sync Open PR Branches
+
 on:
   push:
     branches:
       - develop
 
 jobs:
-  autoupdate:
-    name: autoupdate
-    runs-on: ubuntu-22.04
+  sync-pr-branches:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Update pull request branches targeting develop
-        uses: castastrophe/actions-pr-auto-update@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}  # Use a PAT for forked repositories
-        with:
-          target_branch: develop  # Update PRs targeting the `develop` branch
-          skip_conflict_prs: true  # Skip PRs with merge conflicts
+      - name: List Open PRs
+        id: list_prs
+        run: |
+          PRS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/Fgrdxgu/oppia/pulls?state=open")
+          echo "Open PRs: $PRS"
+          echo "::set-output name=prs::$PRS"
+
+      - name: Sync PR Branches
+        run: |
+          prs="${{ steps.list_prs.outputs.prs }}"
+          for pr in $(echo "$prs" | jq -r '.[].number'); do
+            pr_branch=$(echo "$prs" | jq -r ".[$pr-1].head.ref")
+            echo "Syncing PR branch: $pr_branch"
+            
+            # Fetch the latest `develop` branch
+            git fetch origin develop
+
+            # Checkout the PR branch
+            git checkout "$pr_branch"
+
+            # Merge the latest `develop` into the PR branch
+            git merge origin/develop --no-ff --no-edit
+
+            # Push the changes back to the PR branch
+            git push origin "$pr_branch"
+          done
